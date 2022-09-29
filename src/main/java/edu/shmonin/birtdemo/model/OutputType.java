@@ -4,7 +4,7 @@ import org.eclipse.birt.report.engine.api.IRenderOption;
 
 public enum OutputType {
     HTML(IRenderOption.OUTPUT_FORMAT_HTML),
-    XLS("XLS"),
+    XLSX("XLSX"),
     INVALID("invalid");
 
     final String value;
