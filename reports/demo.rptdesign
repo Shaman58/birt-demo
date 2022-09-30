@@ -890,7 +890,7 @@ from mock_data]]></xml-property>
         </simple-master-page>
     </page-setup>
     <body>
-        <table id="32">
+        <table name="Table1" id="32">
             <property name="dataSet">temp-comp</property>
             <list-property name="boundDataColumns">
                 <structure>
@@ -976,6 +976,95 @@ from mock_data]]></xml-property>
                     <cell id="53"/>
                     <cell id="54"/>
                     <cell id="55"/>
+                </row>
+            </footer>
+        </table>
+        <table name="Table2" id="61">
+            <property name="dataSet">companies</property>
+            <list-property name="boundDataColumns">
+                <structure>
+                    <property name="name">company_name</property>
+                    <text-property name="displayName">company_name</text-property>
+                    <expression name="expression" type="javascript">dataSetRow["company_name"]</expression>
+                    <property name="dataType">string</property>
+                </structure>
+                <structure>
+                    <property name="name">city</property>
+                    <text-property name="displayName">city</text-property>
+                    <expression name="expression" type="javascript">dataSetRow["city"]</expression>
+                    <property name="dataType">string</property>
+                </structure>
+                <structure>
+                    <property name="name">email</property>
+                    <text-property name="displayName">email</text-property>
+                    <expression name="expression" type="javascript">dataSetRow["email"]</expression>
+                    <property name="dataType">string</property>
+                </structure>
+                <structure>
+                    <property name="name">balance</property>
+                    <text-property name="displayName">balance</text-property>
+                    <expression name="expression" type="javascript">dataSetRow["balance"]</expression>
+                    <property name="dataType">string</property>
+                </structure>
+            </list-property>
+            <column id="85"/>
+            <column id="86"/>
+            <column id="87"/>
+            <column id="88"/>
+            <header>
+                <row id="62">
+                    <cell id="63">
+                        <label id="64">
+                            <text-property name="text">company_name</text-property>
+                        </label>
+                    </cell>
+                    <cell id="65">
+                        <label id="66">
+                            <text-property name="text">city</text-property>
+                        </label>
+                    </cell>
+                    <cell id="67">
+                        <label id="68">
+                            <text-property name="text">email</text-property>
+                        </label>
+                    </cell>
+                    <cell id="69">
+                        <label id="70">
+                            <text-property name="text">balance</text-property>
+                        </label>
+                    </cell>
+                </row>
+            </header>
+            <detail>
+                <row id="71">
+                    <cell id="72">
+                        <data id="73">
+                            <property name="resultSetColumn">company_name</property>
+                        </data>
+                    </cell>
+                    <cell id="74">
+                        <data id="75">
+                            <property name="resultSetColumn">city</property>
+                        </data>
+                    </cell>
+                    <cell id="76">
+                        <data id="77">
+                            <property name="resultSetColumn">email</property>
+                        </data>
+                    </cell>
+                    <cell id="78">
+                        <data id="79">
+                            <property name="resultSetColumn">balance</property>
+                        </data>
+                    </cell>
+                </row>
+            </detail>
+            <footer>
+                <row id="80">
+                    <cell id="81"/>
+                    <cell id="82"/>
+                    <cell id="83"/>
+                    <cell id="84"/>
                 </row>
             </footer>
         </table>

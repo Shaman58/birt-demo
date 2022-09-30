@@ -1,6 +1,5 @@
 package edu.shmonin.birtdemo.config;
 
-import lombok.RequiredArgsConstructor;
 import org.eclipse.birt.core.exception.BirtException;
 import org.eclipse.birt.report.engine.api.EngineConfig;
 import org.eclipse.birt.report.engine.api.IReportEngine;
@@ -13,7 +12,6 @@ import static org.eclipse.birt.core.framework.Platform.startup;
 import static org.eclipse.birt.report.engine.api.IReportEngineFactory.EXTENSION_REPORT_ENGINE_FACTORY;
 
 @Component
-@RequiredArgsConstructor
 public class BirtConfig {
 
     @Bean
