@@ -79,7 +79,7 @@
                 </ex-property>
             </list-property>
             <property name="odaDriverClass">org.postgresql.Driver</property>
-            <property name="odaURL">jdbc:postgresql://192.168.0.105:4444/my-test-db</property>
+            <property name="odaURL">jdbc:postgresql://192.168.0.114:4444/my-test-db</property>
             <property name="odaUser">user</property>
             <encrypted-property name="odaPassword" encryptionID="base64">cGFzc3dvcmQ=</encrypted-property>
         </oda-data-source>

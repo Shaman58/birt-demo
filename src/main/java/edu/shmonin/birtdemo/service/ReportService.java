@@ -1,18 +1,30 @@
 package edu.shmonin.birtdemo.service;
 
-import edu.shmonin.birtdemo.model.*;
-import lombok.*;
-import org.eclipse.birt.core.exception.*;
-import org.eclipse.birt.report.engine.api.*;
-import org.springframework.beans.factory.*;
-import org.springframework.stereotype.*;
+import edu.shmonin.birtdemo.model.OutputType;
+import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.eclipse.birt.core.exception.BirtException;
+import org.eclipse.birt.report.engine.api.EngineException;
+import org.eclipse.birt.report.engine.api.IExtractionResults;
+import org.eclipse.birt.report.engine.api.IReportEngine;
+import org.eclipse.birt.report.engine.api.IResultSetItem;
+import org.eclipse.birt.report.engine.api.RenderOption;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.stereotype.Service;
 
-import javax.servlet.http.*;
-import java.io.*;
-import java.util.*;
+import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static java.io.File.*;
-import static org.eclipse.birt.core.framework.Platform.*;
+import static java.io.File.separator;
+import static org.apache.poi.ss.usermodel.WorkbookFactory.create;
+import static org.eclipse.core.internal.content.ContentTypeManager.shutdown;
 
 @Service
 @RequiredArgsConstructor
@@ -34,11 +46,52 @@ public class ReportService implements DisposableBean {
         }
     }
 
-    public void createXLS(String reportName) {
-        try {
-            extractDataSets(reportName).forEach((k, v) -> printResults(v));
-        } catch (EngineException e) {
+    public void fillXLSTemplate(String reportName, HttpServletResponse response) {
+        try (var inputStream = new FileInputStream("demo-template.xlsx")) {
+            var workbook = create(inputStream);
+            var sheet = workbook.getSheetAt(0);
+            var resultData = extractDataSets(reportName);
+            var targetCells = new ArrayList<Cell>();
+            getTargetCells(targetCells, sheet, resultData);
+            for (Cell targetCell : targetCells) {
+                writeDataSet(sheet, targetCell, resultData.get((targetCell.getRichStringCellValue().toString())));
+            }
+            response.setHeader("Content-Disposition", "attachment; filename=test.xlsx");
+            workbook.write(response.getOutputStream());
+        } catch (IOException | BirtException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void getTargetCells(List<Cell> targetCells, Sheet sheet, Map<String, IExtractionResults> resultData) {
+        for (Row row : sheet) {
+            for (Cell cell : row) {
+                var cellType = cell.getCellType().toString();
+                if (cellType.equals("STRING") && resultData.containsKey(cell.getRichStringCellValue().toString())) {
+                    targetCells.add(cell);
+                }
+            }
+        }
+    }
+
+    private void writeDataSet(Sheet sheet, Cell target, IExtractionResults data) throws BirtException {
+        var columnAddress = target.getAddress().getColumn();
+        var rowAddress = target.getAddress().getRow();
+        var iData = data.nextResultIterator();
+        if (iData != null) {
+            var columnCount = iData.getResultMetaData().getColumnCount();
+            while (iData.next()) {
+                var row = sheet.createRow(rowAddress++);
+                for (int i = 0; i < columnCount; i++) {
+                    var cell = row.createCell(columnAddress + i);
+                    if (iData.getResultMetaData().getColumnTypeName(i).equals("Float")) {
+                        cell.setCellValue((Double) iData.getValue(i));
+                    } else {
+                        cell.setCellValue(iData.getValue(i).toString());
+                    }
+                }
+            }
+            iData.close();
         }
     }
 
@@ -52,32 +105,10 @@ public class ReportService implements DisposableBean {
         for (var resultSet : dataExtractionTask.getResultSetList()) {
             var dataSetName = ((IResultSetItem) resultSet).getResultSetName();
             dataExtractionTask.selectResultSet(dataSetName);
-            resultSets.put(dataSetName, dataExtractionTask.extract());
+            resultSets.put("[" + dataSetName + "]", dataExtractionTask.extract());
         }
         dataExtractionTask.close();
         return resultSets;
-    }
-
-    private void printResults(IExtractionResults iExtractionResults) {//заглушка
-        IDataIterator iData;
-        try {
-            if (iExtractionResults != null) {
-                iData = iExtractionResults.nextResultIterator();
-                if (iData != null) {
-                    var resultMetaData = iData.getResultMetaData();
-                    for (int i = 0; i < resultMetaData.getColumnCount(); i++) {
-                        System.out.println("col name: " + resultMetaData.getColumnName(i));
-                        System.out.println("col type: " + resultMetaData.getColumnTypeName(i));
-                    }
-                    while (iData.next()) {
-                        System.out.println(iData.getValue(0) + " " + iData.getValue(1));
-                    }
-                    iData.close();
-                }
-            }
-        } catch (BirtException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
