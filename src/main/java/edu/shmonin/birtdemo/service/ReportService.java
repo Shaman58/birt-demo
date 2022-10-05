@@ -8,8 +8,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.eclipse.birt.core.exception.BirtException;
 import org.eclipse.birt.report.engine.api.EngineException;
 import org.eclipse.birt.report.engine.api.IExtractionResults;
+import org.eclipse.birt.report.engine.api.IParameterDefn;
 import org.eclipse.birt.report.engine.api.IReportEngine;
 import org.eclipse.birt.report.engine.api.IResultSetItem;
+import org.eclipse.birt.report.engine.api.IScalarParameterDefn;
 import org.eclipse.birt.report.engine.api.RenderOption;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,10 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,13 +36,15 @@ import static org.eclipse.core.internal.content.ContentTypeManager.shutdown;
 public class ReportService implements DisposableBean {
     private final IReportEngine iReportEngine;
 
-    public void generateReport(String reportName, OutputType output, HttpServletResponse response) {
+    public void generateReport(String reportName, Map<String, Object> allQueryParams, HttpServletResponse response) {
         try {
             var report = iReportEngine.openReportDesign("./reports" + separator + reportName + ".rptdesign");
             var reportTask = iReportEngine.createRunAndRenderTask(report);
-            response.setContentType(iReportEngine.getMIMEType(output.name()));
+            var params = extractParameters(allQueryParams, iReportEngine.createGetParameterDefinitionTask(report).getParameterDefns(true));
+            reportTask.setParameterValues(params);
+            response.setContentType(iReportEngine.getMIMEType(OutputType.HTML.name()));
             var options = new RenderOption();
-            options.setOutputFormat(output.name());
+            options.setOutputFormat(OutputType.HTML.name());
             reportTask.setRenderOption(options);
             options.setOutputStream(response.getOutputStream());
             reportTask.run();
@@ -46,11 +53,11 @@ public class ReportService implements DisposableBean {
         }
     }
 
-    public void fillXLSTemplate(String reportName, HttpServletResponse response) {
+    public void fillXLSTemplate(String reportName, Map<String, Object> allQueryParams, HttpServletResponse response) {
         try (var inputStream = new FileInputStream("demo-template.xlsx")) {
             var workbook = create(inputStream);
             var sheet = workbook.getSheetAt(0);
-            var resultData = extractDataSets(reportName);
+            var resultData = extractDataSets(reportName, allQueryParams);
             var targetCells = new ArrayList<Cell>();
             getTargetCells(targetCells, sheet, resultData);
             for (Cell targetCell : targetCells) {
@@ -61,6 +68,24 @@ public class ReportService implements DisposableBean {
         } catch (IOException | BirtException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Map<String, Object> extractParameters(Map<String, Object> allQueryParams, Collection parameterDefns) {
+        var parameterTypes = new HashMap<String, Object>();
+        for (Object paramDefn : parameterDefns) {
+            var param = (IScalarParameterDefn) paramDefn;
+            switch (param.getDataType()) {
+                case IParameterDefn.TYPE_STRING ->
+                        parameterTypes.put(param.getName(), allQueryParams.get(param.getName()).toString());
+                case IParameterDefn.TYPE_DATE ->
+                        parameterTypes.put(param.getName(), Date.valueOf(LocalDate.parse((CharSequence) allQueryParams.get(param.getName()))));
+                case IParameterDefn.TYPE_INTEGER ->
+                        parameterTypes.put(param.getName(), Integer.valueOf((String) allQueryParams.get(param.getName())));
+                case IParameterDefn.TYPE_DECIMAL ->
+                        parameterTypes.put(param.getName(), Double.valueOf((String) allQueryParams.get(param.getName())));
+            }
+        }
+        return parameterTypes;
     }
 
     private void getTargetCells(List<Cell> targetCells, Sheet sheet, Map<String, IExtractionResults> resultData) {
@@ -95,9 +120,11 @@ public class ReportService implements DisposableBean {
         }
     }
 
-    private Map<String, IExtractionResults> extractDataSets(String reportName) throws EngineException {
+    private Map<String, IExtractionResults> extractDataSets(String reportName, Map<String, Object> allQueryParams) throws BirtException {
         var report = iReportEngine.openReportDesign("./reports" + separator + reportName + ".rptdesign");
         var reportTask = iReportEngine.createRunTask(report);
+        var params = extractParameters(allQueryParams, iReportEngine.createGetParameterDefinitionTask(report).getParameterDefns(true));
+        reportTask.setParameterValues(params);
         reportTask.run("./temp/temp.rptdocument");
         var reportDocument = iReportEngine.openReportDocument("./temp/temp.rptdocument");
         var dataExtractionTask = iReportEngine.createDataExtractionTask(reportDocument);
